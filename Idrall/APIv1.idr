@@ -51,6 +51,12 @@ evalQuote x = do
   pure e
 
 export
+roundTripEvalQuote : String -> IOEither Error (Expr Void)
+roundTripEvalQuote x = do
+  xE <- exprFromString x
+  liftEither (evalQuote xE)
+
+export
 roundTripEvalQuoteConv : String -> String -> IOEither Error ()
 roundTripEvalQuoteConv x y = do
   xE <- exprFromString x
