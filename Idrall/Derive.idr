@@ -95,12 +95,12 @@ where
   go : List (Name, TTImp) -> Elab ()
   go [] =  pure ()
   go ((n, t) :: ys) = do
-    logMsg "" 7 ("Name: " ++ show n)
-    logTerm "" 7 "Type" t
+    logMsg "" 0 ("Name: " ++ show n)
+    logTerm "" 0 "Type" t
     go ys
   more : (Name, List (Name, TTImp)) -> Elab ()
   more (n, xs) = do
-    logMsg "" 7 ("name1: " ++ show n)
+    logMsg "" 0 ("name1: " ++ show n)
     go xs
 
 public export
@@ -171,6 +171,7 @@ deriveFromDhall n =
      -- add a catch all pattern
      let funDecl = IDef EmptyFC funName (clauses ++ [patClause `(~(var funName) ~implicit') `(Nothing)])
 
+     logMsg "" 0 ("funName: " ++ show funName)
      -- declare the fuction in the env
      declare [funClaim, funDecl]
      [(ifName, _)] <- getType `{{FromDhall}}
@@ -196,3 +197,23 @@ deriveFromDhall n =
                                      _ => `(~acc <*> (lookup (MkFieldName ~name) ~(var m) >>= fromDhall)))
                           `(pure ~(var t)) xs
           pure (rhs)
+
+data Example
+  = Foo Nat
+  | Bar Bool
+
+record Example3 where
+  constructor MkExample3
+  mn : Maybe Nat
+  n : Nat
+
+ex1 : Expr Void
+ex1 = (EApp (EField (EUnion $ fromList [((MkFieldName "Bar"), Just EBool), ((MkFieldName "Foo"), Just ENatural)]) (MkFieldName "Foo")) (ENaturalLit 3))
+
+instFromDhall : Expr Void -> Maybe Example
+instFromDhall (EApp (EField (EUnion xs) (MkFieldName "Foo")) v) = pure Foo <*> fromDhall v
+instFromDhall (EApp (EField (EUnion xs) (MkFieldName "Bar")) v) = pure Bar <*> fromDhall v
+instFromDhall _ = Nothing
+
+%runElab (deriveFromDhall `{{ Example3 }})
+
