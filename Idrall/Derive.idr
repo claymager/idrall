@@ -138,9 +138,13 @@ FromDhall a => FromDhall (Maybe a) where
   fromDhall ENone = neutral
   fromDhall _ = neutral
 
+data IdrisType
+  = ADT
+  | Record
+
 export
-deriveFromDhall : (name : Name) -> Elab ()
-deriveFromDhall n =
+deriveFromDhall : IdrisType -> (name : Name) -> Elab ()
+deriveFromDhall dt n =
   do [(n, _)] <- getType n
              | _ => fail "Ambiguous name"
      let funName = UN ("fromDhall" ++ show (stripNs n))
@@ -160,18 +164,19 @@ deriveFromDhall n =
 
      argName <- genReadableSym "arg"
 
-     -- given constructors, lookup names in json object for those constructors
-     clauses <- traverse (\(cn, as) => genClause cn argName (reverse as)) cons
+     clauses <- traverse (\(cn, as) => genClauseRecord cn argName (reverse as)) cons
 
      clausesADT <- traverse (\(cn, as) => genClauseADT funName cn argName (reverse as)) cons
      -- create function from JSON to Maybe Example
      -- using the above clauses as patterns
-     let name = n
      let clauses = [patClause `(~(var funName) (ERecordLit ~(bindvar $ show argName)))
                               (foldl (\acc, x => `(~x <|> ~acc)) `(Nothing) (clauses))]
      let clausesADTs =
           map (\x => patClause (fst x) (snd x))
             clausesADT
+
+     ?kjkjkj
+     let name = n
      let funClaim = IClaim EmptyFC MW Export [Inline] (MkTy EmptyFC EmptyFC funName `(Expr Void -> Maybe ~(var name)))
      -- add a catch all pattern
      let funDecl = IDef EmptyFC funName (clauses ++ clausesADTs ++ [patClause `(~(var funName) ~implicit') `(Nothing)])
@@ -191,8 +196,8 @@ deriveFromDhall n =
      declare [objClaim, objDecl]
   where
     ||| moved from where clause, used for record constuctors
-    genClause : Name -> Name -> List (Name, TTImp) -> Elab (TTImp)
-    genClause constructor' arg xs = do
+    genClauseRecord : Name -> Name -> List (Name, TTImp) -> Elab (TTImp)
+    genClauseRecord constructor' arg xs = do
           let rhs = foldr (\(n, type), acc =>
                             let name = primStr $ (show n) in
                                 case type of
@@ -212,12 +217,25 @@ deriveFromDhall n =
           logMsg "" 0 ("xs: " ++ debug2)
           case xs of
                [] => pure $ (lhs, `(pure ~(var constructor')))
-               (x :: []) => pure $ (lhs, `(pure ~(var constructor') <*> fromDhall ~(var arg)))
-               (x :: _) => fail "too many args"
+               ((n, `(Prelude.Types.Maybe _)) :: []) => pure $ (lhs, `(pure ~(var constructor') <*> fromDhall ~(var arg)))
+               ((n, _) :: []) => pure $ (lhs, `(pure ~(var constructor') <*> fromDhall ~(var arg)))
+               (x :: _) => fail $ "too many args for constructor: " ++ show constructor'
+     -- cons : (List (Name, List (Name, TTImp)))
+    genClauses : IdrisType -> Name -> Name -> Name -> List (Name, List (Name, TTImp)) -> Elab (List Clause)
+    genClauses ADT funName constructor' arg cons = do
+      -- given constructors, lookup fields in dhall unions for those constructors
+      clausesADT <- traverse (\(cn, as) => genClauseADT funName constructor' arg (reverse as)) cons
+      pure $ map (\x => patClause (fst x) (snd x)) clausesADT
+    genClauses Record funName constructor' arg cons = do
+      -- given constructors, lookup names in dhall records for those constructors
+      clausesRecord <- traverse (\(cn, as) => genClauseRecord cn arg (reverse as)) cons
+      pure $ pure $ patClause `(~(var funName) (ERecordLit ~(bindvar $ show arg)))
+                              (foldl (\acc, x => `(~x <|> ~acc)) `(Nothing) (clausesRecord))
 
 data ExampleADT
   = Foo
   | Bar Bool
+  | Baz (Maybe Bool)
 
 record ExampleRecord where
   constructor MkExampleRecord
@@ -226,10 +244,11 @@ record ExampleRecord where
 
 instFromDhall : Expr Void -> Maybe ExampleADT
 -- instFromDhall (EApp (EField (EUnion xs) (MkFieldName "Foo")) v) = pure Foo <*> fromDhall v
--- instFromDhall (EApp (EField (EUnion xs) (MkFieldName "Bar")) v) = pure Bar <*> fromDhall v
+instFromDhall (EApp (EField (EUnion xs) (MkFieldName "Baz")) v) = pure Baz <*> fromDhall v
 instFromDhall _ = Nothing
 
-%runElab (deriveFromDhall `{{ ExampleADT }})
+{-
+%runElab (deriveFromDhall Union `{{ ExampleADT }})
 
 exADT1 : Maybe ExampleADT
 exADT1 = fromDhall
@@ -237,8 +256,10 @@ exADT1 = fromDhall
 exADT2 : Maybe ExampleADT
 exADT2 = fromDhall
   (EApp (EField (EUnion $ fromList []) (MkFieldName "Bar")) $ EBoolLit True)
+exADT3 : Maybe ExampleADT
+exADT3 = fromDhall
+  (EApp (EField (EUnion $ fromList []) (MkFieldName "Baz")) $ ESome $ EBoolLit True)
 
-{-
 %runElab (deriveFromDhall `{{ ExampleRecord }})
 
 ex1 : Expr Void
