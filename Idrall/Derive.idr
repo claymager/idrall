@@ -204,12 +204,19 @@ deriveFromDhall n =
     genClauseADT : Name -> Name -> Name -> List (Name, TTImp) -> Elab (TTImp, TTImp)
     genClauseADT funName constructor' arg xs =
       let cn = primStr (show $ stripNs constructor')
+          debug = show $ constructor'
+          debug2 = show $ map fst xs
           lhs = `(~(var funName) (EApp (EField (EUnion xs) (MkFieldName ~cn)) ~(bindvar $ show arg)))
-          rhs = `(pure ~(var constructor') <*> fromDhall ~(var arg)) in do
-          pure (lhs, rhs)
+          in do
+          logMsg "" 0 ("constructor: " ++ debug)
+          logMsg "" 0 ("xs: " ++ debug2)
+          case xs of
+               [] => pure $ (lhs, `(pure ~(var constructor')))
+               (x :: []) => pure $ (lhs, `(pure ~(var constructor') <*> fromDhall ~(var arg)))
+               (x :: _) => fail "too many args"
 
 data ExampleADT
-  = Foo Nat
+  = Foo
   | Bar Bool
 
 record ExampleRecord where
@@ -218,7 +225,7 @@ record ExampleRecord where
   n : Nat
 
 instFromDhall : Expr Void -> Maybe ExampleADT
-instFromDhall (EApp (EField (EUnion xs) (MkFieldName "Foo")) v) = pure Foo <*> fromDhall v
+-- instFromDhall (EApp (EField (EUnion xs) (MkFieldName "Foo")) v) = pure Foo <*> fromDhall v
 -- instFromDhall (EApp (EField (EUnion xs) (MkFieldName "Bar")) v) = pure Bar <*> fromDhall v
 instFromDhall _ = Nothing
 
