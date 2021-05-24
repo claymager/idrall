@@ -86,7 +86,10 @@ getArgs (IPi _ _ _ (Just n) argTy retTy) = ((n, argTy) ::) <$> getArgs retTy
 getArgs (IPi _ _ _ Nothing _ _) = fail $ "All arguments must be explicitly named"
 getArgs _ = pure []
 
-logCons : (List (Name, List (Name, TTImp))) -> Elab ()
+Cons : Type
+Cons = (List (Name, List (Name, TTImp)))
+
+logCons : Cons -> Elab ()
 logCons [] = pure ()
 logCons (x :: xs) = do
   more x
@@ -144,13 +147,13 @@ data IdrisType
 
 export
 deriveFromDhall : IdrisType -> (name : Name) -> Elab ()
-deriveFromDhall dt n =
-  do [(n, _)] <- getType n
+deriveFromDhall it n =
+  do [(name, _)] <- getType n
              | _ => fail "Ambiguous name"
-     let funName = UN ("fromDhall" ++ show (stripNs n))
-     let objName = UN ("__impl_fromDhall" ++ show (stripNs n))
+     let funName = UN ("fromDhall" ++ show (stripNs name))
+     let objName = UN ("__impl_fromDhall" ++ show (stripNs name))
 
-     conNames <- getCons n
+     conNames <- getCons name
 
      -- get the constructors of the record
      -- cons : (List (Name, List (Name, TTImp)))
@@ -164,22 +167,11 @@ deriveFromDhall dt n =
 
      argName <- genReadableSym "arg"
 
-     clauses <- traverse (\(cn, as) => genClauseRecord cn argName (reverse as)) cons
+     clauses <- genClauses it funName argName cons
 
-     clausesADT <- traverse (\(cn, as) => genClauseADT funName cn argName (reverse as)) cons
-     -- create function from JSON to Maybe Example
-     -- using the above clauses as patterns
-     let clauses = [patClause `(~(var funName) (ERecordLit ~(bindvar $ show argName)))
-                              (foldl (\acc, x => `(~x <|> ~acc)) `(Nothing) (clauses))]
-     let clausesADTs =
-          map (\x => patClause (fst x) (snd x))
-            clausesADT
-
-     ?kjkjkj
-     let name = n
      let funClaim = IClaim EmptyFC MW Export [Inline] (MkTy EmptyFC EmptyFC funName `(Expr Void -> Maybe ~(var name)))
      -- add a catch all pattern
-     let funDecl = IDef EmptyFC funName (clauses ++ clausesADTs ++ [patClause `(~(var funName) ~implicit') `(Nothing)])
+     let funDecl = IDef EmptyFC funName (clauses ++ [patClause `(~(var funName) ~implicit') `(Nothing)])
 
      -- declare the fuction in the env
      declare [funClaim, funDecl]
@@ -213,22 +205,20 @@ deriveFromDhall dt n =
           debug2 = show $ map fst xs
           lhs = `(~(var funName) (EApp (EField (EUnion xs) (MkFieldName ~cn)) ~(bindvar $ show arg)))
           in do
-          logMsg "" 0 ("constructor: " ++ debug)
-          logMsg "" 0 ("xs: " ++ debug2)
           case xs of
                [] => pure $ (lhs, `(pure ~(var constructor')))
                ((n, `(Prelude.Types.Maybe _)) :: []) => pure $ (lhs, `(pure ~(var constructor') <*> fromDhall ~(var arg)))
                ((n, _) :: []) => pure $ (lhs, `(pure ~(var constructor') <*> fromDhall ~(var arg)))
                (x :: _) => fail $ "too many args for constructor: " ++ show constructor'
-     -- cons : (List (Name, List (Name, TTImp)))
-    genClauses : IdrisType -> Name -> Name -> Name -> List (Name, List (Name, TTImp)) -> Elab (List Clause)
-    genClauses ADT funName constructor' arg cons = do
+    genClauses : IdrisType -> Name -> Name -> Cons -> Elab (List Clause)
+    genClauses ADT funName arg cons = do
       -- given constructors, lookup fields in dhall unions for those constructors
-      clausesADT <- traverse (\(cn, as) => genClauseADT funName constructor' arg (reverse as)) cons
+      clausesADT <- traverse (\(cn, as) => genClauseADT funName cn arg (reverse as)) cons
       pure $ map (\x => patClause (fst x) (snd x)) clausesADT
-    genClauses Record funName constructor' arg cons = do
+    genClauses Record funName arg cons = do
       -- given constructors, lookup names in dhall records for those constructors
       clausesRecord <- traverse (\(cn, as) => genClauseRecord cn arg (reverse as)) cons
+      -- create clause from dhall to `Maybe a` using the above clauses as the rhs
       pure $ pure $ patClause `(~(var funName) (ERecordLit ~(bindvar $ show arg)))
                               (foldl (\acc, x => `(~x <|> ~acc)) `(Nothing) (clausesRecord))
 
@@ -247,8 +237,7 @@ instFromDhall : Expr Void -> Maybe ExampleADT
 instFromDhall (EApp (EField (EUnion xs) (MkFieldName "Baz")) v) = pure Baz <*> fromDhall v
 instFromDhall _ = Nothing
 
-{-
-%runElab (deriveFromDhall Union `{{ ExampleADT }})
+%runElab (deriveFromDhall ADT `{{ ExampleADT }})
 
 exADT1 : Maybe ExampleADT
 exADT1 = fromDhall
@@ -260,7 +249,7 @@ exADT3 : Maybe ExampleADT
 exADT3 = fromDhall
   (EApp (EField (EUnion $ fromList []) (MkFieldName "Baz")) $ ESome $ EBoolLit True)
 
-%runElab (deriveFromDhall `{{ ExampleRecord }})
+%runElab (deriveFromDhall Record `{{ ExampleRecord }})
 
 ex1 : Expr Void
 ex1 = (EApp (EField (EUnion $ fromList [((MkFieldName "Bar"), Just EBool), ((MkFieldName "Foo"), Just ENatural)]) (MkFieldName "Foo")) (ENaturalLit 3))
@@ -270,4 +259,3 @@ exRecord = fromDhall
   (ERecordLit $
     fromList [ (MkFieldName "mn", ENaturalLit 3)
              , (MkFieldName "n", ENaturalLit 4)])
-             -}
