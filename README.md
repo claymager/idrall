@@ -33,7 +33,9 @@ record ExRec1 where
 
 There's implementations of `FromDhall` for `String`, `Nat`, `Integer`, `Bool`, `Double`, and `List`/`Maybe` of those. That interface gives you the `fromDhall` function you can use on dhall expression to get a `Maybe` of your Idris ADT or Record. See the `./tests/derive` dir for some examples.
 
-The behaviour of this isn't thought out yet. For example, the `deriveFromDhall ADT` function ignores the dhall union and just looks for matching constructors. Also `deriveFromDhall Record`
+The behaviour of this isn't thought out yet. For example, the `deriveFromDhall ADT` function ignores the dhall union and just looks for matching constructors. Also `deriveFromDhall Record` ignores extra fields on the dhall record. This behaviour may change.
+
+There should also be a function that does the whole `parse -> resolve -> typecheck -> eval` process so you have an `Expr Void` to call `fromDhall` on, but that's currently scattered around, see the next section for details.
 
 ## Indepth Usage (very alpha, YMMV)
 
