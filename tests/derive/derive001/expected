@@ -1,4 +1,4 @@
-Just (MkExample3 Just 3 4 5 True [True, False] "hello")
+Just (MkExample3 Just 3 4 5 True 2.0 [True, False] "hello" Just "hello")
 Just Foo
 Just (Bar True)
 Just (Baz Just True)
