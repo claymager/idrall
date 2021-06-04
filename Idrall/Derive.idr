@@ -5,6 +5,7 @@ import Data.List1
 import public Data.String
 
 import Idrall.Expr
+import Idrall.Eval
 
 %language ElabReflection
 
@@ -98,12 +99,12 @@ where
   go : List (Name, TTImp) -> Elab ()
   go [] =  pure ()
   go ((n, t) :: ys) = do
-    logMsg "" 0 ("ArgName: " ++ show n)
-    logTerm "" 0 "ArgType" t
+    logMsg "" 7 ("ArgName: " ++ show n)
+    logTerm "" 7 "ArgType" t
     go ys
   more : (Name, List (Name, TTImp)) -> Elab ()
   more (constructor', args) = do
-    logMsg "" 0 ("Constructor: " ++ show constructor')
+    logMsg "" 7 ("Constructor: " ++ show constructor')
     go args
 
 public export
@@ -131,6 +132,10 @@ FromDhall Double where
   fromDhall _ = neutral
 
 export
+FromDhall String where
+  fromDhall x = strFromExpr x
+
+export
 FromDhall a => FromDhall (List a) where
   fromDhall (EListLit _ xs) = pure $ !(traverse fromDhall xs)
   fromDhall _ = neutral
@@ -141,6 +146,9 @@ FromDhall a => FromDhall (Maybe a) where
   fromDhall ENone = neutral
   fromDhall _ = neutral
 
+||| Used with FromDhall interface, to dervice implementations
+||| for ADTs or Records
+public export
 data IdrisType
   = ADT
   | Record
@@ -231,6 +239,7 @@ record ExampleRecord where
   constructor MkExampleRecord
   mn : Maybe Nat
   n : Nat
+  st : String
 
 instFromDhall : Expr Void -> Maybe ExampleADT
 -- instFromDhall (EApp (EField (EUnion xs) (MkFieldName "Foo")) v) = pure Foo <*> fromDhall v
@@ -258,4 +267,5 @@ exRecord : Maybe ExampleRecord
 exRecord = fromDhall
   (ERecordLit $
     fromList [ (MkFieldName "mn", ENaturalLit 3)
-             , (MkFieldName "n", ENaturalLit 4)])
+             , (MkFieldName "n", ENaturalLit 4)
+             , (MkFieldName "st", (ETextLit (MkChunks [] "hello")))])
