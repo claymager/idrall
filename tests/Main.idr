@@ -16,7 +16,7 @@ import Test.Golden
 %default covering
 
 allTests : TestPool
-allTests = MkTestPool "dhall-lang tests" []
+allTests = MkTestPool "dhall-lang tests" [] Default
   [ "idrall001"
   , "idrall002"
   , "idrall003"
@@ -25,7 +25,7 @@ allTests = MkTestPool "dhall-lang tests" []
   ]
 
 deriveTests : TestPool
-deriveTests = MkTestPool "derive tests" []
+deriveTests = MkTestPool "derive tests" [] Default
   [ "derive001"
   ]
 
