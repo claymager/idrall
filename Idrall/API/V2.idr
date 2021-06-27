@@ -21,7 +21,7 @@ export
 dhallExprFromString : String -> IOEither Error (Expr Void)
 
 export
-deriveFromDhallString : FromDhall a => String -> IOEither Error a
+deriveFromDhallString : FromDhall ty => String -> IOEither Error ty
 deriveFromDhallString x = do
   e <- roundTripCheckEvalQuote $ x
   liftMaybe $ fromDhall e
@@ -29,12 +29,3 @@ deriveFromDhallString x = do
 export
 deriveFromDhallFile : FromDhall a => Path -> IOEither Error a
 deriveFromDhallFile = deriveFromDhallString . show
-
-showIOEitherError : Show a => IOEither Error a -> IO String
-showIOEitherError (MkIOEither x) = do
-  x' <- x
-  pure $ show x'
-
-doStuff : IO ()
-doStuff =
-  putStrLn !(showIOEitherError $ deriveFromDhallString {a=Bool} "3")

@@ -29,10 +29,16 @@ deriveTests = MkTestPool "derive tests" [] Default
   [ "derive001"
   ]
 
+examplesTests : TestPool
+examplesTests = MkTestPool "examples tests" [] Default
+  [ "example001"
+  ]
+
 main : IO ()
 main = runner
   [ testPaths "idrall" allTests
   , testPaths "derive" deriveTests
+  , testPaths "examples" examplesTests
   ] where
 
     testPaths : String -> TestPool -> TestPool
