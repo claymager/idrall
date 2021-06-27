@@ -1,1 +1,1 @@
-Right MkPackage "SomePackage" Nothing Nothing ["SomePackage.Foo", "SomePackage.Bar"]
+Right MkPackage "myidrispackage" Nothing Nothing ["MyIdrisPackage.Main", "MyIdrisPackage.Foo"]

@@ -8,9 +8,11 @@ Parse, evaluate, check/infer types of Dhall expressions.
 
 ## Status
 
-Still a work in progress, but for a given dhall expression with not much imports, this should be able to parse/type check and attempt evaluation. Type checker is complete (one test is failing but that is due to [this Idris2 issue](https://github.com/idris-lang/Idris2/issues/29). Need to start running the other tests like parsing/normalisation etc. Everything around imports needs some work, and also not sure what the API should look like.
+Still a work in progress, but for a given dhall expression with not much imports, idrall should be able to parse/type check and attempt evaluation. Type checker is pretty complete (one test is failing but that is due to [this Idris2 issue](https://github.com/idris-lang/Idris2/issues/29). Need to start running the other tests like parsing/normalisation etc. Everything around imports needs some work. There's now an elaborator reflection, but it's pretty new so will see how it handles.
 
 ## Derive Usage (WIP)
+
+For an example of how to do a whole `parse -> resolve -> typecheck -> eval` pass of a dhall file, and marshall it into an idris type, check out the file [`./examples/Package.idr`](https://github.com/alexhumphreys/idrall/blob/master/examples/Package.idr)
 
 There Is a `FromDhall` interface that you can use elaborator reflection to derive. You can use it for both ADTs and Records like so:
 
@@ -34,8 +36,6 @@ record ExRec1 where
 There's implementations of `FromDhall` for `String`, `Nat`, `Integer`, `Bool`, `Double`, and `List`/`Maybe` of those. That interface gives you the `fromDhall` function you can use on dhall expression to get a `Maybe` of your Idris ADT or Record. See the `./tests/derive` dir for some examples.
 
 The behaviour of this isn't thought out yet. For example, the `deriveFromDhall ADT` function ignores the dhall union and just looks for matching constructors. Also `deriveFromDhall Record` ignores extra fields on the dhall record. This behaviour may change.
-
-There should also be a function that does the whole `parse -> resolve -> typecheck -> eval` process so you have an `Expr Void` to call `fromDhall` on, but that's currently scattered around, see the next section for details.
 
 ## Indepth Usage (very alpha, YMMV)
 

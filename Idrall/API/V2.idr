@@ -1,10 +1,10 @@
 module Idrall.API.V2
 
 import Idrall.Value
-import Idrall.Expr
-import Idrall.Error
-import Idrall.Derive
-import Idrall.IOEither
+import public Idrall.Expr
+import public Idrall.Error
+import public Idrall.Derive
+import public Idrall.IOEither
 import Idrall.APIv1
 
 import System.Path -- TODO make public export in System.Directory.Tree?
