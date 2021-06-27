@@ -1,5 +1,5 @@
-{ package = "SomePackage"
-, sourceDir = Some "./src"
-, depends = Some [ "contrib", "base" ]
-, modules = [ "SomePackage.Foo", "SomePackage.Bar" ]
+{ package = "myidrispackage"
+, sourcedir = Some "./"
+, depends = Some ["contrib"]
+, modules = ["MyIdrisPackage.Main"]
 }

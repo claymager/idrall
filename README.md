@@ -48,10 +48,10 @@ $ idris2 Idrall/APIv1.idr -p contrib --client ':exec doStuff valueFromString "{h
 Success: (VNaturalLit 5)
 ```
 
-You can also create local dhall files, like the one provided at `samples/if-function.dhall`:
+You can also create local dhall files, like the one provided at `examples/if-function.dhall`:
 
 ```
-$ cat samples/if-function.dhall
+$ cat examples/if-function.dhall
 let f = λ(x : Bool) →
   if x
   then "it's true!"
@@ -62,7 +62,7 @@ in f True
 and use `valueFromString` to evaluate them as follows. Note the path in the string:
 
 ```
-$ idris2 Idrall/APIv1.idr -p contrib --client ':exec doStuff valueFromString "./samples/if-function.dhall"'
+$ idris2 Idrall/APIv1.idr -p contrib --client ':exec doStuff valueFromString "./examples/if-function.dhall"'
 Success: (VTextLit (MkVChunks [] "it's true!"))
 ```
 
